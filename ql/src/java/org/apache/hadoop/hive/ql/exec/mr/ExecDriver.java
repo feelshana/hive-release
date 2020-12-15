@@ -199,7 +199,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
   @Override
   public boolean checkFatalErrors(Counters ctrs, StringBuilder errMsg) {
      Counters.Counter cntr = ctrs.findCounter(
-        HiveConf.getVar(job, HiveConf.ConfVars.HIVECOUNTERGROUP),
+        HiveConf.getVar(job, ConfVars.HIVECOUNTERGROUP),
         Operator.HIVECOUNTERFATAL);
     return cntr != null && cntr.getValue() > 0;
   }
@@ -219,6 +219,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     Context ctx = driverContext.getCtx();
     boolean ctxCreated = false;
     Path emptyScratchDir;
+    JobClient jc = null;
 
     MapWork mWork = work.getMapWork();
     ReduceWork rWork = work.getReduceWork();
@@ -265,11 +266,11 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
 
     // Turn on speculative execution for reducers
     boolean useSpeculativeExecReducers = HiveConf.getBoolVar(job,
-        HiveConf.ConfVars.HIVESPECULATIVEEXECREDUCERS);
-    HiveConf.setBoolVar(job, HiveConf.ConfVars.HADOOPSPECULATIVEEXECREDUCERS,
+        ConfVars.HIVESPECULATIVEEXECREDUCERS);
+    HiveConf.setBoolVar(job, ConfVars.HADOOPSPECULATIVEEXECREDUCERS,
         useSpeculativeExecReducers);
 
-    String inpFormat = HiveConf.getVar(job, HiveConf.ConfVars.HIVEINPUTFORMAT);
+    String inpFormat = HiveConf.getVar(job, ConfVars.HIVEINPUTFORMAT);
 
     if (mWork.isUseBucketizedHiveInputFormat()) {
       inpFormat = BucketizedHiveInputFormat.class.getName();
@@ -288,11 +289,11 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     job.setOutputValueClass(Text.class);
 
     int returnVal = 0;
-    boolean noName = StringUtils.isEmpty(HiveConf.getVar(job, HiveConf.ConfVars.HADOOPJOBNAME));
+    boolean noName = StringUtils.isEmpty(HiveConf.getVar(job, ConfVars.HADOOPJOBNAME));
 
     if (noName) {
       // This is for a special case to ensure unit tests pass
-      HiveConf.setVar(job, HiveConf.ConfVars.HADOOPJOBNAME, "JOB" + Utilities.randGen.nextInt());
+      HiveConf.setVar(job, ConfVars.HADOOPJOBNAME, "JOB" + Utilities.randGen.nextInt());
     }
 
     try{
@@ -359,12 +360,12 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
 
       // remove the pwd from conf file so that job tracker doesn't show this
       // logs
-      String pwd = HiveConf.getVar(job, HiveConf.ConfVars.METASTOREPWD);
+      String pwd = HiveConf.getVar(job, ConfVars.METASTOREPWD);
       if (pwd != null) {
-        HiveConf.setVar(job, HiveConf.ConfVars.METASTOREPWD, "HIVE");
+        HiveConf.setVar(job, ConfVars.METASTOREPWD, "HIVE");
       }
       LOG.error(job.get("mapreduce.framework.name"));
-      JobClient jc = new JobClient(job);
+      jc = new JobClient(job);
       // make this client wait if job tracker is not behaving well.
       Throttle.checkJobTracker(job, LOG);
 
@@ -381,7 +382,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
           StatsCollectionContext sc = new StatsCollectionContext(job);
           sc.setStatsTmpDirs(statsTmpDir);
           if (!statsPublisher.init(sc)) { // creating stats table if not exists
-            if (HiveConf.getBoolVar(job, HiveConf.ConfVars.HIVE_STATS_RELIABLE)) {
+            if (HiveConf.getBoolVar(job, ConfVars.HIVE_STATS_RELIABLE)) {
               throw
                 new HiveException(ErrorMsg.STATSPUBLISHER_INITIALIZATION_ERROR.getErrorCodedMsg());
             }
@@ -393,7 +394,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
       Utilities.createTmpDirs(job, rWork);
 
       SessionState ss = SessionState.get();
-      if (HiveConf.getVar(job, HiveConf.ConfVars.HIVE_EXECUTION_ENGINE).equals("tez")
+      if (HiveConf.getVar(job, ConfVars.HIVE_EXECUTION_ENGINE).equals("tez")
           && ss != null) {
         TezSessionState session = ss.getTezSession();
         TezSessionPoolManager.getInstance().close(session, true);
@@ -403,7 +404,7 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
       rj = jc.submitJob(job);
       // replace it back
       if (pwd != null) {
-        HiveConf.setVar(job, HiveConf.ConfVars.METASTOREPWD, pwd);
+        HiveConf.setVar(job, ConfVars.METASTOREPWD, pwd);
       }
 
       returnVal = jobExecHelper.progress(rj, jc, ctx);
@@ -436,6 +437,9 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
             rj.killJob();
           }
           jobID = rj.getID().toString();
+        }
+        if (jc!=null) {
+          jc.close();
         }
       } catch (Exception e) {
 	LOG.warn(e);
@@ -475,19 +479,19 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
     }
 
     if (work.getMaxSplitSize() != null) {
-      HiveConf.setLongVar(job, HiveConf.ConfVars.MAPREDMAXSPLITSIZE, work.getMaxSplitSize().longValue());
+      HiveConf.setLongVar(job, ConfVars.MAPREDMAXSPLITSIZE, work.getMaxSplitSize().longValue());
     }
 
     if (work.getMinSplitSize() != null) {
-      HiveConf.setLongVar(job, HiveConf.ConfVars.MAPREDMINSPLITSIZE, work.getMinSplitSize().longValue());
+      HiveConf.setLongVar(job, ConfVars.MAPREDMINSPLITSIZE, work.getMinSplitSize().longValue());
     }
 
     if (work.getMinSplitSizePerNode() != null) {
-      HiveConf.setLongVar(job, HiveConf.ConfVars.MAPREDMINSPLITSIZEPERNODE, work.getMinSplitSizePerNode().longValue());
+      HiveConf.setLongVar(job, ConfVars.MAPREDMINSPLITSIZEPERNODE, work.getMinSplitSizePerNode().longValue());
     }
 
     if (work.getMinSplitSizePerRack() != null) {
-      HiveConf.setLongVar(job, HiveConf.ConfVars.MAPREDMINSPLITSIZEPERRACK, work.getMinSplitSizePerRack().longValue());
+      HiveConf.setLongVar(job, ConfVars.MAPREDMINSPLITSIZEPERRACK, work.getMinSplitSizePerRack().longValue());
     }
   }
 
@@ -679,13 +683,13 @@ public class ExecDriver extends Task<MapredWork> implements Serializable, Hadoop
       }
     }
 
-    boolean isSilent = HiveConf.getBoolVar(conf, HiveConf.ConfVars.HIVESESSIONSILENT);
+    boolean isSilent = HiveConf.getBoolVar(conf, ConfVars.HIVESESSIONSILENT);
 
-    String queryId = HiveConf.getVar(conf, HiveConf.ConfVars.HIVEQUERYID, "").trim();
+    String queryId = HiveConf.getVar(conf, ConfVars.HIVEQUERYID, "").trim();
     if(queryId.isEmpty()) {
       queryId = "unknown-" + System.currentTimeMillis();
     }
-    System.setProperty(HiveConf.ConfVars.HIVEQUERYID.toString(), queryId);
+    System.setProperty(ConfVars.HIVEQUERYID.toString(), queryId);
 
     if (noLog) {
       // If started from main(), and noLog is on, we should not output

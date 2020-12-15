@@ -2196,7 +2196,7 @@ public class DDLTask extends Task<DDLWork> implements Serializable {
       }
       createTab_stmt.add(TBL_PROPERTIES, tbl_properties);
 
-      outStream.writeBytes(createTab_stmt.render());
+      outStream.writeBytes(new String(createTab_stmt.render().getBytes(),"UTF-8"));
       outStream.close();
       outStream = null;
     } catch (FileNotFoundException e) {
