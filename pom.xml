@@ -187,6 +187,17 @@
   <repositories>
    <!-- This needs to be removed before checking in-->
     <repository>
+      <id>spring-plugin</id>
+      <url>https://repo.spring.io/plugins-release/</url>
+    </repository>
+
+
+    <repository>
+      <id>hortonworks</id>
+      <name>hortonworks</name>
+      <url>https://repo.hortonworks.com/content/groups/public</url>
+    </repository>
+    <repository>
       <id>datanucleus</id>
       <name>datanucleus maven repository</name>
       <url>http://www.datanucleus.org/downloads/maven2</url>
