@@ -209,7 +209,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
   }
 
   @Override
-  public org.apache.hadoop.mapreduce.JobContext newJobContext(Job job) {
+  public JobContext newJobContext(Job job) {
     return new JobContextImpl(job.getConfiguration(), job.getJobID());
   }
 
@@ -362,7 +362,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
   /**
    * Shim for MiniTezCluster
    */
-  public class MiniTezShim extends Hadoop23Shims.MiniMrShim {
+  public class MiniTezShim extends MiniMrShim {
 
     private final MiniTezCluster mr;
     private final Configuration conf;
@@ -443,7 +443,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
   /**
    * Shim for MiniSparkOnYARNCluster
    */
-  public class MiniSparkShim extends Hadoop23Shims.MiniMrShim {
+  public class MiniSparkShim extends MiniMrShim {
 
     private final MiniSparkOnYARNCluster mr;
     private final Configuration conf;
@@ -585,19 +585,19 @@ public class Hadoop23Shims extends HadoopShimsSecure {
 
     @Override
     public org.apache.hadoop.mapreduce.TaskAttemptContext createTaskAttemptContext(Configuration conf,
-                                                                                   org.apache.hadoop.mapreduce.TaskAttemptID taskId) {
-      return new org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl(
+                                                                                   TaskAttemptID taskId) {
+      return new TaskAttemptContextImpl(
               conf instanceof JobConf? new JobConf(conf) : conf,
               taskId);
     }
 
     @Override
-    public org.apache.hadoop.mapred.TaskAttemptContext createTaskAttemptContext(org.apache.hadoop.mapred.JobConf conf,
+    public org.apache.hadoop.mapred.TaskAttemptContext createTaskAttemptContext(JobConf conf,
                                                                                 org.apache.hadoop.mapred.TaskAttemptID taskId, Progressable progressable) {
       org.apache.hadoop.mapred.TaskAttemptContext newContext = null;
       try {
         java.lang.reflect.Constructor<org.apache.hadoop.mapred.TaskAttemptContextImpl> construct = org.apache.hadoop.mapred.TaskAttemptContextImpl.class.getDeclaredConstructor(
-                org.apache.hadoop.mapred.JobConf.class, org.apache.hadoop.mapred.TaskAttemptID.class,
+                JobConf.class, org.apache.hadoop.mapred.TaskAttemptID.class,
                 Reporter.class);
         construct.setAccessible(true);
         newContext = construct.newInstance(
@@ -616,8 +616,8 @@ public class Hadoop23Shims extends HadoopShimsSecure {
     }
 
     @Override
-    public org.apache.hadoop.mapred.JobContext createJobContext(org.apache.hadoop.mapred.JobConf conf,
-                                                                org.apache.hadoop.mapreduce.JobID jobId, Progressable progressable) {
+    public org.apache.hadoop.mapred.JobContext createJobContext(JobConf conf,
+                                                                JobID jobId, Progressable progressable) {
       return new org.apache.hadoop.mapred.JobContextImpl(
               new JobConf(conf), jobId, progressable);
     }
@@ -964,7 +964,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
   }
 
   @Override
-  public Configuration getConfiguration(org.apache.hadoop.mapreduce.JobContext context) {
+  public Configuration getConfiguration(JobContext context) {
     return context.getConfiguration();
   }
 
@@ -1259,11 +1259,35 @@ public class Hadoop23Shims extends HadoopShimsSecure {
 
     @Override
     public boolean arePathsOnSameEncryptionZone(Path path1, Path path2) throws IOException {
-      EncryptionZone zone1, zone2;
+//      EncryptionZone zone1, zone2;
+      return equivalentEncryptionZones(hdfsAdmin.getEncryptionZoneForPath(path1),
+                                                  hdfsAdmin.getEncryptionZoneForPath(path2));
+//      zone1 = hdfsAdmin.getEncryptionZoneForPath(path1);
+//      zone2 = hdfsAdmin.getEncryptionZoneForPath(path2);
+//
+//      if (zone1 == null && zone2 == null) {
+//        return true;
+//      } else if (zone1 == null || zone2 == null) {
+//        return false;
+//      }
+//
+//      return zone1.equals(zone2);
+    }
 
-      zone1 = hdfsAdmin.getEncryptionZoneForPath(path1);
-      zone2 = hdfsAdmin.getEncryptionZoneForPath(path2);
+    @Override
+   public boolean arePathsOnSameEncryptionZone(Path path1, Path path2,
+                                             HadoopShims.HdfsEncryptionShim encryptionShim2) throws IOException {
+         if (!(encryptionShim2 instanceof HdfsEncryptionShim)) {
+                LOG.warn("EncryptionShim for path2 (" + path2 + ") is of unexpected type: " + encryptionShim2.getClass()
+                         + ". Assuming path2 is on the same EncryptionZone as path1(" + path1 + ").");
+               return true;
+             }
 
+                  return equivalentEncryptionZones(hdfsAdmin.getEncryptionZoneForPath(path1),
+                      ((HdfsEncryptionShim)encryptionShim2).hdfsAdmin.getEncryptionZoneForPath(path2));
+    }
+
+    private boolean equivalentEncryptionZones(EncryptionZone zone1, EncryptionZone zone2) {
       if (zone1 == null && zone2 == null) {
         return true;
       } else if (zone1 == null || zone2 == null) {
@@ -1271,7 +1295,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
       }
 
       return zone1.equals(zone2);
-    }
+          }
 
     @Override
     public int comparePathKeyStrength(Path path1, Path path2) throws IOException {
@@ -1303,7 +1327,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
       checkKeyProvider();
 
       if (keyProvider.getMetadata(keyName) == null) {
-        final KeyProvider.Options options = new Options(this.conf);
+        final Options options = new Options(this.conf);
         options.setCipher(HDFS_SECURITY_DEFAULT_CIPHER);
         options.setBitLength(bitLength);
         keyProvider.createKey(keyName, options);
@@ -1374,7 +1398,7 @@ public class Hadoop23Shims extends HadoopShimsSecure {
       }
     }
 
-    return new HadoopShims.NoopHdfsEncryptionShim();
+    return new NoopHdfsEncryptionShim();
   }
 
   @Override

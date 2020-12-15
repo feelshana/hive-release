@@ -85,21 +85,21 @@ public interface HadoopShims {
    *  @return TaskAttempt Log Url
    */
   String getTaskAttemptLogUrl(JobConf conf,
-      String taskTrackerHttpAddress,
-      String taskAttemptId)
+                              String taskTrackerHttpAddress,
+                              String taskAttemptId)
           throws MalformedURLException;
 
   /**
    * Returns a shim to wrap MiniMrCluster
    */
   public MiniMrShim getMiniMrCluster(Configuration conf, int numberOfTaskTrackers,
-      String nameNode, int numDir) throws IOException;
+                                     String nameNode, int numDir) throws IOException;
 
   public MiniMrShim getMiniTezCluster(Configuration conf, int numberOfTaskTrackers,
-      String nameNode, int numDir) throws IOException;
+                                      String nameNode, int numDir) throws IOException;
 
   public MiniMrShim getMiniSparkCluster(Configuration conf, int numberOfTaskTrackers,
-      String nameNode, int numDir) throws IOException;
+                                        String nameNode, int numDir) throws IOException;
 
   /**
    * Shim for MiniMrCluster
@@ -115,9 +115,9 @@ public interface HadoopShims {
    * was moved from org.apache.hadoop.dfs to org.apache.hadoop.hdfs
    */
   MiniDFSShim getMiniDfs(Configuration conf,
-      int numDataNodes,
-      boolean format,
-      String[] racks) throws IOException;
+                         int numDataNodes,
+                         boolean format,
+                         String[] racks) throws IOException;
 
   /**
    * Shim around the functions in MiniDFSCluster that Hive uses.
@@ -243,7 +243,7 @@ public interface HadoopShims {
     CombineFileSplit getInputSplitShim() throws IOException;
 
     RecordReader getRecordReader(JobConf job, CombineFileSplit split, Reporter reporter,
-        Class<RecordReader<K, V>> rrClass) throws IOException;
+                                 Class<RecordReader<K, V>> rrClass) throws IOException;
   }
 
   /**
@@ -266,7 +266,7 @@ public interface HadoopShims {
    * @throws IOException
    */
   BlockLocation[] getLocations(FileSystem fs,
-      FileStatus status) throws IOException;
+                               FileStatus status) throws IOException;
 
   /**
    * For the block locations returned by getLocations() convert them into a Treemap
@@ -279,7 +279,7 @@ public interface HadoopShims {
    * @throws IOException
    */
   TreeMap<Long, BlockLocation> getLocationsWithOffset(FileSystem fs,
-      FileStatus status) throws IOException;
+                                                      FileStatus status) throws IOException;
 
   /**
    * Flush and make visible to other users the changes to the given stream.
@@ -299,7 +299,7 @@ public interface HadoopShims {
   public HdfsFileStatus getFullFileStatus(Configuration conf, FileSystem fs, Path file) throws IOException;
 
   public void setFullFileStatus(Configuration conf, HdfsFileStatus sourceStatus,
-      String targetGroup, FileSystem fs, Path target, boolean recursion)
+                                String targetGroup, FileSystem fs, Path target, boolean recursion)
       throws IOException;
   /**
    * For a given file, set a given file status.
@@ -311,7 +311,7 @@ public interface HadoopShims {
    * @throws IOException
    */
   public void setFullFileStatus(Configuration conf, HdfsFileStatus sourceStatus,
-    FileSystem fs, Path target, boolean recursive) throws IOException;
+                                FileSystem fs, Path target, boolean recursive) throws IOException;
 
   /**
    * Includes the vanilla FileStatus, and AclStatus if it applies to this version of hadoop.
@@ -330,11 +330,11 @@ public interface HadoopShims {
 
     public TaskAttemptID createTaskAttemptID();
 
-    public org.apache.hadoop.mapreduce.TaskAttemptContext createTaskAttemptContext(Configuration conf,
-        TaskAttemptID taskId);
+    public TaskAttemptContext createTaskAttemptContext(Configuration conf,
+                                                       TaskAttemptID taskId);
 
     public org.apache.hadoop.mapred.TaskAttemptContext createTaskAttemptContext(JobConf conf,
-        org.apache.hadoop.mapred.TaskAttemptID taskId, Progressable progressable);
+                                                                                org.apache.hadoop.mapred.TaskAttemptID taskId, Progressable progressable);
 
     public JobContext createJobContext(Configuration conf, JobID jobId);
 
@@ -625,6 +625,19 @@ public interface HadoopShims {
      */
     public boolean arePathsOnSameEncryptionZone(Path path1, Path path2) throws IOException;
 
+
+
+    /**
+     * Checks if two HDFS paths are on the same encrypted or unencrypted zone.
+     *
+     * @param path1 Path to HDFS file system
+     * @param path2 Path to HDFS file system
+     * @param encryptionShim2 The encryption-shim corresponding to path2.
+     * @return True if both paths are in the same zone; False otherwise.
+     * @throws IOException If an error occurred attempting to get encryption information
+     */
+    public boolean arePathsOnSameEncryptionZone(Path path1, Path path2, HdfsEncryptionShim encryptionShim2) throws IOException;
+
     /**
      * Compares two encrypted path strengths.
      *
@@ -676,6 +689,11 @@ public interface HadoopShims {
     @Override
     public boolean arePathsOnSameEncryptionZone(Path path1, Path path2) throws IOException {
     /* not supported */
+      return true;
+    }
+    @Override
+    public boolean arePathsOnSameEncryptionZone(Path path1, Path path2, HdfsEncryptionShim encryptionShim2) throws IOException {
+            // Not supported.
       return true;
     }
 
