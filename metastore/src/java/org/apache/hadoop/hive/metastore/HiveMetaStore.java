@@ -2249,6 +2249,15 @@ public class HiveMetaStore extends ThriftHiveMetastore {
       }
     }
 
+    private boolean isDefaultFs(String defalutFs, String location) {
+      String defalutFsNames[] = defalutFs.split("\\/\\/");
+      String locationNames[] = location.split("\\/");
+      if (defalutFsNames.length < 2 || locationNames.length < 3 || !location.startsWith("hdfs://")) {
+        return true;
+      }
+      return defalutFsNames[1].equals(locationNames[2]);
+    }
+
     private List<Partition> add_partitions_core(final RawStore ms,
         String dbName, String tblName, List<Partition> parts, final boolean ifNotExists)
         throws MetaException, InvalidObjectException, AlreadyExistsException, TException {
@@ -2268,7 +2277,14 @@ public class HiveMetaStore extends ThriftHiveMetastore {
               + "database or table " + dbName + "." + tblName + " does not exist");
         }
 
-        if (!parts.isEmpty()) {
+        String defaultFs = ms.getConf().get("fs.defaultFS", "test");
+        String location = tbl.getSd().getLocation();
+        boolean isDefaultFs = isDefaultFs(defaultFs, location);
+        if (!isDefaultFs) {
+          logInfo("defaultFs # " + defaultFs + ", location # " + location + ", isDefaultFs # " + isDefaultFs);
+        }
+
+        if (!parts.isEmpty() && isDefaultFs) {
           firePreEvent(new PreAddPartitionEvent(tbl, parts, this));
         }
 
